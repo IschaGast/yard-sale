@@ -95,6 +95,7 @@ Apply these inclusion rules before calling tools or searching the web. Do not in
 1. Return one tight bounding box around the entire item. Use normalized integer coordinates from 0 to 1000, with (0, 0) at the frame's top-left and (1000, 1000) at its bottom-right. Ensure xMin < xMax and yMin < yMax.
 2. Produce a stable lowercase semantic fingerprint using brand, model, and generic item identity. Exclude price, condition, color, and session-specific details.
 3. Call check_previous_scans once with the identity and description of every included item before finalizing. It returns likely similar candidates plus the most recent scans. Compare the current item with those candidates and set previousMatchId to a candidate ID when it is likely the same physical sale item seen again. Allow for naming differences and synonyms such as “flats” versus “pumps”; fingerprint equality is not required. Recent items from the active session deserve extra consideration because adjacent frames often show the same object. Do not merge items merely because they share a category, brand, or model: their visible details and descriptions must also be consistent. Set previousMatchId to null when no candidate is a convincing match.
+   When you set previousMatchId, the item has already been valued: skip steps 4 and 5 for it, copy the matched candidate's currency, estimatedLowCents, estimatedHighCents, retailPriceCents, activePriceCents, soldPriceCents, and valueSummary unchanged, and return an empty comparables array. Still read a visible price tag into observedPriceCents.
 4. Research the open web when the identity is specific enough. The user shops in the Netherlands, so prefer Dutch and European sources. For retail, prioritize the manufacturer, bol.com, and other Dutch or European stores to confirm the product identity and establish the primary current retail-price baseline.
 5. For second-hand market evidence, search marktplaats.nl and vinted.nl (for example with site:marktplaats.nl or site:vinted.nl queries) in parallel with retail research. These are asking prices, never completed sales: report them as type "active". If search_ebay_active_listings is available, you may use it as additional secondary evidence.
 6. Set retailPriceCents to the current new-retail price when supported by manufacturer or store evidence. If the exact product is discontinued, estimate its current equivalent replacement value from closely comparable retail products. Use null only when there is not enough evidence for a defensible retail estimate.
@@ -145,6 +146,13 @@ export async function analyzeFrame(options: {
           scanSessionId: items.scanSessionId,
           lastSeenAt: items.lastSeenAt,
           seenCount: items.seenCount,
+          currency: items.currency,
+          estimatedLowCents: items.estimatedLowCents,
+          estimatedHighCents: items.estimatedHighCents,
+          retailPriceCents: items.retailPriceCents,
+          activePriceCents: items.activePriceCents,
+          soldPriceCents: items.soldPriceCents,
+          valueSummary: items.valueSummary,
         })
         .from(items)
         .orderBy(desc(items.lastSeenAt))
